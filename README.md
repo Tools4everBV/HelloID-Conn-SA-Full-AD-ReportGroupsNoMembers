@@ -37,8 +37,6 @@ After the all-in-one PowerShell script has run and created all the required reso
  1. Update the following [user defined variables](https://docs.helloid.com/hc/en-us/articles/360014169933-How-to-Create-and-Manage-User-Defined-Variables)
 <table>
   <tr><td><strong>Variable name</strong></td><td><strong>Example value</strong></td><td><strong>Description</strong></td></tr>
-  <tr><td>HIDinternalApiKey</td><td>Welkom01!</td><td>API Key of the HelloID portal used to read HelloID Self Service products and users</td></tr>
-  <tr><td>HIDinternalApiSecret</td><td>Welkom01!</td><td>API Secret of the HelloID portal used to read HelloID Self Service products and users</td></tr>
   <tr><td>HIDreportFolder</td><td>C:\HIDreports\</td><td>Local folder on HelloID Agent server for exporting CSV reports</td></tr>
   <tr><td>ADGroupReportOU</td><td>[{ "OU": "OU=HelloIDCreated,OU=Groups,OU=Enyoi,DC=enyoi-media,DC=local"}]</td><td>Array of Active Directory OUs for scoping shown AD Group objects in this report</td></tr>
 </table>
