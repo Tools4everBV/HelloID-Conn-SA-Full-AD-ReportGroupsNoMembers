@@ -15,22 +15,11 @@ This HelloID Service Automation Delegated Form provides an Active Directory repo
 ## All-in-one PowerShell setup script
 The PowerShell script "createform.ps1" contains a complete PowerShell script using the HelloID API to create the complete Form including user defined variables, tasks and data sources.
 
+_Please note that this script asumes none of the required resources do exists within HelloID. The script does not contain versioning or source control_
+
 ### Getting started
- 1. Download the script "createform.ps1"
- 2. Open the script in your favorite PowerShell console / editor
- 3. Open your HelloID portal
- 4. Get or create your own [API Key and Secret](https://docs.helloid.com/hc/en-us/articles/360002008873-API-Keys-Overview)
- 5. Update the following connection details in the all-in-one PowerShell script
- <table>
-  <tr><td><strong>Line</strong></td><td><strong>Variable</strong></td><td><strong>Example</strong></td><td><strong>Description</strong></td></tr>
-  <tr><td>2</td><td>$PortalBaseUrl</td><td>https://customer01.helloid.com</td><td>Your own HelloID portal URL</td></tr>
-  <tr><td>3</td><td>$apiKey</td><td></td><td>Your own HelloID API Key</td></tr>
-  <tr><td>4</td><td>$apiSecret</td><td></td><td>Your own HelloID API Secret</td></tr>
-  <tr><td>5</td><td>$delegatedFormAccessGroupNames</td><td>@("Users", "HID_administrators")</td><td>Array of local HelloID group name giving access to this new Delegated Form</td></tr>
-</table>
- 6. Run the all-in-one PowerShell script
- 
- _Please note that this script asumes none of the required resources do exists within HelloID. The script does not contain versioning or source control_
+Please follow the documentation steps on [HelloID Docs](https://docs.helloid.com/hc/en-us/articles/360017556559-Service-automation-GitHub-resources) in order to setup and run the All-in one Powershell Script in your own environment.
+
 
 ## Post-setup configuration
 After the all-in-one PowerShell script has run and created all the required resources. The following items need to be configured according to your own environment
