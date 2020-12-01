@@ -10,6 +10,7 @@ This HelloID Service Automation Delegated Form provides an Active Directory repo
 * [All-in-one PowerShell setup script](#all-in-one-powershell-setup-script)
   * [Getting started](#getting-started)
 * [Post-setup configuration](#post-setup-configuration)
+* [Manual resources](#manual-resources)
 
 
 ## All-in-one PowerShell setup script
@@ -29,3 +30,12 @@ After the all-in-one PowerShell script has run and created all the required reso
   <tr><td>HIDreportFolder</td><td>C:\HIDreports\</td><td>Local folder on HelloID Agent server for exporting CSV reports</td></tr>
   <tr><td>ADGroupReportOU</td><td>[{ "OU": "OU=HelloIDCreated,OU=Groups,OU=Enyoi,DC=enyoi-media,DC=local"}]</td><td>Array of Active Directory OUs for scoping shown AD Group objects in this report</td></tr>
 </table>
+
+## Manual resources
+This Delegated Form uses the following resources in order to run
+
+### Task data source 'AD-group-generate-table-report-empty-groups'
+This task data source runs an Active Directory query to select the AD user accounts that match this report. It uses an array of Active Directory OU's specified as HelloID user defined variable named _"ADusersReportOU"_ to specify the report scoping.
+
+### Delegated form task 'AD-export-report-groups-no-members'
+This delegated form task runs the same Active Directory query as the task data source (AD query is defined at two places) and export the data to a local CSV file if selected in the form.
