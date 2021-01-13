@@ -1,0 +1,18 @@
+[
+    {
+        "key":  "CanonicalName",
+        "type":  0
+    },
+    {
+        "key":  "Name",
+        "type":  0
+    },
+    {
+        "key":  "Description",
+        "type":  0
+    },
+    {
+        "key":  "CN",
+        "type":  0
+    }
+]
