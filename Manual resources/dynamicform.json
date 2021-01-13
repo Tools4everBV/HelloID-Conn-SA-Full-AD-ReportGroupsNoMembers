@@ -1,60 +1,64 @@
 [
     {
-      "templateOptions": {},
-      "type": "markdown",
-      "summaryVisibility": "Show",
-      "body": "The following report will show local AD groups that have no members. Please wait while the data is loading...",
-      "requiresTemplateOptions": false
+        "templateOptions":  {
+
+                            },
+        "type":  "markdown",
+        "summaryVisibility":  "Show",
+        "body":  "The following report will show local AD groups that have no members. Please wait while the data is loading...",
+        "requiresTemplateOptions":  false
     },
     {
-      "key": "grid",
-      "templateOptions": {
-        "label": "Results",
-        "grid": {
-          "columns": [
-            {
-              "headerName": "CanonicalName",
-              "field": "CanonicalName"
-            },
-            {
-              "headerName": "Name",
-              "field": "Name"
-            },
-            {
-              "headerName": "CN",
-              "field": "CN"
-            },
-            {
-              "headerName": "Description",
-              "field": "Description"
-            }
-          ],
-          "height": 500,
-          "rowSelection": "single"
-        },
-        "dataSourceConfig": {
-          "dataSourceGuid": "f9f1e8d5-b656-4845-738c-08d87f3a4c22",
-          "input": {
-            "propertyInputs": []
-          }
-        },
-        "useFilter": true,
-        "useDefault": false
-      },
-      "type": "grid",
-      "summaryVisibility": "Hide element",
-      "requiresTemplateOptions": true
+        "key":  "grid",
+        "templateOptions":  {
+                                "label":  "Results",
+                                "grid":  {
+                                             "columns":  [
+                                                             {
+                                                                 "headerName":  "CanonicalName",
+                                                                 "field":  "CanonicalName"
+                                                             },
+                                                             {
+                                                                 "headerName":  "Name",
+                                                                 "field":  "Name"
+                                                             },
+                                                             {
+                                                                 "headerName":  "CN",
+                                                                 "field":  "CN"
+                                                             },
+                                                             {
+                                                                 "headerName":  "Description",
+                                                                 "field":  "Description"
+                                                             }
+                                                         ],
+                                             "height":  500,
+                                             "rowSelection":  "single"
+                                         },
+                                "dataSourceConfig":  {
+                                                         "dataSourceGuid":  "$dataSourceGuid_0",
+                                                         "input":  {
+                                                                       "propertyInputs":  [
+
+                                                                                          ]
+                                                                   }
+                                                     },
+                                "useFilter":  true,
+                                "useDefault":  false
+                            },
+        "type":  "grid",
+        "summaryVisibility":  "Hide element",
+        "requiresTemplateOptions":  true
     },
     {
-      "key": "exportReport",
-      "templateOptions": {
-        "label": "Export report (local export on HelloID Agent server)",
-        "useSwitch": true,
-        "checkboxLabel": "Yes",
-        "mustBeTrue": true
-      },
-      "type": "boolean",
-      "summaryVisibility": "Show",
-      "requiresTemplateOptions": true
+        "key":  "exportReport",
+        "templateOptions":  {
+                                "label":  "Export report (local export on HelloID Agent server)",
+                                "useSwitch":  true,
+                                "checkboxLabel":  "Yes",
+                                "mustBeTrue":  true
+                            },
+        "type":  "boolean",
+        "summaryVisibility":  "Show",
+        "requiresTemplateOptions":  true
     }
-  ]
+]
