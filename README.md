@@ -39,3 +39,6 @@ This Powershell data source runs an Active Directory query to select the AD grou
 
 ### Delegated form task 'AD-export-report-groups-no-members'
 This delegated form task runs the same Active Directory query as the task data source (AD query is defined at two places) and export the data to a local CSV file if selected in the form.
+
+# HelloID Docs
+The official HelloID documentation can be found at: https://docs.helloid.com/
