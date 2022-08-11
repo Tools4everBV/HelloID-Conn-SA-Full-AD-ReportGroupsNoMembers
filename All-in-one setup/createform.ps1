@@ -7,7 +7,7 @@ $portalUrl = "https://CUSTOMER.helloid.com"
 $apiKey = "API_KEY"
 $apiSecret = "API_SECRET"
 $delegatedFormAccessGroupNames = @("Users") #Only unique names are supported. Groups must exist!
-$delegatedFormCategories = @("Active Directory","Reporting") #Only unique names are supported. Categories will be created if not exists
+$delegatedFormCategories = @("Reporting","Active Directory") #Only unique names are supported. Categories will be created if not exists
 $script:debugLogging = $false #Default value: $false. If $true, the HelloID resource GUIDs will be shown in the logging
 $script:duplicateForm = $false #Default value: $false. If $true, the HelloID resource names will be changed to import a duplicate Form
 $script:duplicateFormSuffix = "_tmp" #the suffix will be added to all HelloID resource names to generate a duplicate form with different resource names
@@ -97,7 +97,7 @@ function Invoke-HelloIDGlobalVariable {
                 secret   = $Secret;
                 ItemType = 0;
             }    
-            $body = ConvertTo-Json -InputObject $body
+            $body = ConvertTo-Json -InputObject $body -Depth 100
     
             $uri = ($script:PortalBaseUrl + "api/v1/automation/variable")
             $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false -Body $body
@@ -143,7 +143,7 @@ function Invoke-HelloIDAutomationTask {
                 objectGuid          = $ObjectGuid;
                 variables           = (ConvertFrom-Json-WithEmptyArray($Variables));
             }
-            $body = ConvertTo-Json -InputObject $body
+            $body = ConvertTo-Json -InputObject $body -Depth 100
     
             $uri = ($script:PortalBaseUrl +"api/v1/automationtasks/powershell")
             $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false -Body $body
@@ -198,7 +198,7 @@ function Invoke-HelloIDDatasource {
                 script             = $DatasourcePsScript;
                 input              = (ConvertFrom-Json-WithEmptyArray($DatasourceInput));
             }
-            $body = ConvertTo-Json -InputObject $body
+            $body = ConvertTo-Json -InputObject $body -Depth 100
       
             $uri = ($script:PortalBaseUrl +"api/v1/datasource")
             $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false -Body $body
@@ -263,10 +263,11 @@ function Invoke-HelloIDDelegatedForm {
     param(
         [parameter(Mandatory)][String]$DelegatedFormName,
         [parameter(Mandatory)][String]$DynamicFormGuid,
-        [parameter()][String][AllowEmptyString()]$AccessGroups,
+        [parameter()][Array][AllowEmptyString()]$AccessGroups,
         [parameter()][String][AllowEmptyString()]$Categories,
         [parameter(Mandatory)][String]$UseFaIcon,
         [parameter()][String][AllowEmptyString()]$FaIcon,
+        [parameter()][String][AllowEmptyString()]$task,
         [parameter(Mandatory)][Ref]$returnObject
     )
     $delegatedFormCreated = $false
@@ -286,11 +287,16 @@ function Invoke-HelloIDDelegatedForm {
                 name            = $DelegatedFormName;
                 dynamicFormGUID = $DynamicFormGuid;
                 isEnabled       = "True";
-                accessGroups    = (ConvertFrom-Json-WithEmptyArray($AccessGroups));
                 useFaIcon       = $UseFaIcon;
                 faIcon          = $FaIcon;
-            }    
-            $body = ConvertTo-Json -InputObject $body
+                task            = ConvertFrom-Json -inputObject $task;
+            }
+            if(-not[String]::IsNullOrEmpty($AccessGroups)) { 
+                $body += @{
+                    accessGroups    = (ConvertFrom-Json-WithEmptyArray($AccessGroups));
+                }
+            }
+            $body = ConvertTo-Json -InputObject $body -Depth 100
     
             $uri = ($script:PortalBaseUrl +"api/v1/delegatedforms")
             $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false -Body $body
@@ -315,6 +321,8 @@ function Invoke-HelloIDDelegatedForm {
     $returnObject.value.guid = $delegatedFormGuid
     $returnObject.value.created = $delegatedFormCreated
 }
+
+
 <# Begin: HelloID Global Variables #>
 foreach ($item in $globalHelloIDVariables) {
 	Invoke-HelloIDGlobalVariable -Name $item.name -Value $item.value -Secret $item.secret 
@@ -380,19 +388,23 @@ Invoke-HelloIDDynamicForm -FormName $dynamicFormName -FormSchema $tmpSchema  -re
 
 <# Begin: Delegated Form Access Groups and Categories #>
 $delegatedFormAccessGroupGuids = @()
-foreach($group in $delegatedFormAccessGroupNames) {
-    try {
-        $uri = ($script:PortalBaseUrl +"api/v1/groups/$group")
-        $response = Invoke-RestMethod -Method Get -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false
-        $delegatedFormAccessGroupGuid = $response.groupGuid
-        $delegatedFormAccessGroupGuids += $delegatedFormAccessGroupGuid
-        
-        Write-Information "HelloID (access)group '$group' successfully found$(if ($script:debugLogging -eq $true) { ": " + $delegatedFormAccessGroupGuid })"
-    } catch {
-        Write-Error "HelloID (access)group '$group', message: $_"
+if(-not[String]::IsNullOrEmpty($delegatedFormAccessGroupNames)){
+    foreach($group in $delegatedFormAccessGroupNames) {
+        try {
+            $uri = ($script:PortalBaseUrl +"api/v1/groups/$group")
+            $response = Invoke-RestMethod -Method Get -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false
+            $delegatedFormAccessGroupGuid = $response.groupGuid
+            $delegatedFormAccessGroupGuids += $delegatedFormAccessGroupGuid
+            
+            Write-Information "HelloID (access)group '$group' successfully found$(if ($script:debugLogging -eq $true) { ": " + $delegatedFormAccessGroupGuid })"
+        } catch {
+            Write-Error "HelloID (access)group '$group', message: $_"
+        }
+    }
+    if($null -ne $delegatedFormAccessGroupGuids){
+        $delegatedFormAccessGroupGuids = ($delegatedFormAccessGroupGuids | Select-Object -Unique | ConvertTo-Json -Depth 100 -Compress)
     }
 }
-$delegatedFormAccessGroupGuids = ($delegatedFormAccessGroupGuids | Select-Object -Unique | ConvertTo-Json -Compress)
 
 $delegatedFormCategoryGuids = @()
 foreach($category in $delegatedFormCategories) {
@@ -408,7 +420,7 @@ foreach($category in $delegatedFormCategories) {
         $body = @{
             name = @{"en" = $category};
         }
-        $body = ConvertTo-Json -InputObject $body
+        $body = ConvertTo-Json -InputObject $body -Depth 100
 
         $uri = ($script:PortalBaseUrl +"api/v1/delegatedformcategories")
         $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false -Body $body
@@ -418,7 +430,7 @@ foreach($category in $delegatedFormCategories) {
         Write-Information "HelloID Delegated Form category '$category' successfully created$(if ($script:debugLogging -eq $true) { ": " + $tmpGuid })"
     }
 }
-$delegatedFormCategoryGuids = (ConvertTo-Json -InputObject $delegatedFormCategoryGuids -Compress)
+$delegatedFormCategoryGuids = (ConvertTo-Json -InputObject $delegatedFormCategoryGuids -Depth 100 -Compress)
 <# End: Delegated Form Access Groups and Categories #>
 
 <# Begin: Delegated Form #>
@@ -426,73 +438,10 @@ $delegatedFormRef = [PSCustomObject]@{guid = $null; created = $null}
 $delegatedFormName = @'
 AD - Report - Groups with no members
 '@
-Invoke-HelloIDDelegatedForm -DelegatedFormName $delegatedFormName -DynamicFormGuid $dynamicFormGuid -AccessGroups $delegatedFormAccessGroupGuids -Categories $delegatedFormCategoryGuids -UseFaIcon "True" -FaIcon "fa fa-info-circle" -returnObject ([Ref]$delegatedFormRef) 
-<# End: Delegated Form #>
-
-<# Begin: Delegated Form Task #>
-if($delegatedFormRef.created -eq $true) { 
-	$tmpScript = @'
-            try {
-                if($exportReport -eq "True") {
-                    ## export file properties
-                    if($HIDreportFolder.EndsWith("\") -eq $false){
-                        $HIDreportFolder = $HIDreportFolder + "\"
-                    }
-                    
-                    $timeStamp = $(get-date -f yyyyMMddHHmmss)
-                    $exportFile = $HIDreportFolder + "Report_AD_GroupsNoMembers_" + $timeStamp + ".csv"
-                    
-                    ## Report details
-                    $filter = {-not (member -like "*")}
-                    $properties = "CanonicalName", "Name", "CN", "Description"
-                
-                    $ous = $ADGroupReportOU | ConvertFrom-Json
-                    $result = foreach($item in $ous) {
-                        Get-ADGroup -Filter $filter -SearchBase $item.ou -Properties $properties
-                    }
-                    $resultCount = @($result).Count
-                    $result = $result | Sort-Object -Property Name
-                    
-                    ## export details
-                    $exportData = @()
-                    if($resultCount -gt 0){
-                        foreach($r in $result){
-                            $exportData += [pscustomobject]@{
-                                "CanonicalName" = $r.CanonicalName;
-                                "Name" = $r.Name;
-                                "CN" = $r.CN;
-                                "Description" = $r.Description;
-                            }
-                        }
-                    }
-                    
-                    $exportCount = @($exportData).Count
-                    HID-Write-Status -Message "Export row count: $exportCount" -Event Information
-                    
-                    $exportData = $exportData | Sort-Object -Property productName, userName
-                    $exportData | Export-Csv -Path $exportFile -Delimiter ";" -NoTypeInformation
-                    
-                    HID-Write-Status -Message "Report [$exportFile] containing $exportCount records created successfully" -Event Success
-                    HID-Write-Summary -Message "Report [$exportFile] containing $exportCount records created successfully" -Event Success
-                }
-            } catch {
-                HID-Write-Status -Message "Error generating report. Error: $($_.Exception.Message)" -Event Error
-                HID-Write-Summary -Message "Error generating report" -Event Failed
-                
-                Hid-Add-TaskResult -ResultValue []
-            }
-'@; 
-
-	$tmpVariables = @'
-{"name":"exportReport","value":"{{form.exportReport}}","secret":false,"typeConstraint":"string"}
+$tmpTask = @'
+{"name":"AD - Report - Groups with no members","script":"$VerbosePreference = \"SilentlyContinue\"\r\n$InformationPreference = \"Continue\"\r\n$WarningPreference = \"Continue\"\r\n\r\n# variables configured in form\r\n$exportReport = $form.exportReport\r\n\r\ntry {\r\n    if($exportReport -eq \"True\") {\r\n        ## export file properties\r\n        if($HIDreportFolder.EndsWith(\"\\\") -eq $false){\r\n            $HIDreportFolder = $HIDreportFolder + \"\\\"\r\n        }\r\n        \r\n        $timeStamp = $(get-date -f yyyyMMddHHmmss)\r\n        $exportFile = $HIDreportFolder + \"Report_AD_GroupsNoMembers_\" + $timeStamp + \".csv\"\r\n        \r\n        ## Report details\r\n        $filter = {-not (member -like \"*\")}\r\n        $properties = \"CanonicalName\", \"Name\", \"CN\", \"Description\"\r\n    \r\n        $ous = $ADGroupReportOU | ConvertFrom-Json\r\n        $result = foreach($item in $ous) {\r\n            Get-ADGroup -Filter $filter -SearchBase $item.ou -Properties $properties\r\n        }\r\n        $resultCount = @($result).Count\r\n        $result = $result | Sort-Object -Property Name\r\n        \r\n        ## export details\r\n        $exportData = @()\r\n        if($resultCount -gt 0){\r\n            foreach($r in $result){\r\n                $exportData += [pscustomobject]@{\r\n                    \"CanonicalName\" = $r.CanonicalName;\r\n                    \"Name\" = $r.Name;\r\n                    \"CN\" = $r.CN;\r\n                    \"Description\" = $r.Description;\r\n                }\r\n            }\r\n        }\r\n        \r\n        $exportCount = @($exportData).Count\r\n        Write-Information \"Export row count: $exportCount\"\r\n        \r\n        $exportData = $exportData | Sort-Object -Property productName, userName\r\n        $exportData | Export-Csv -Path $exportFile -Delimiter \";\" -NoTypeInformation\r\n        \r\n        Write-Information \"Report [$exportFile] containing $exportCount records created successfully\"\r\n        $Log = @{\r\n            Action            = \"Undefined\" # optional. ENUM (undefined = default) \r\n            System            = \"ActiveDirectory\" # optional (free format text) \r\n            Message           = \"Report [$exportFile] containing $exportCount records created successfully\" # required (free format text) \r\n            IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) \r\n            TargetDisplayName = $exportFile # optional (free format text) \r\n            TargetIdentifier  = \"\" # optional (free format text) \r\n        }\r\n        #send result back  \r\n        Write-Information -Tags \"Audit\" -MessageData $log\r\n    }\r\n} catch {\r\n    Write-Error \"Error generating report. Error: $($_.Exception.Message)\"\r\n    $Log = @{\r\n        Action            = \"Undefined\" # optional. ENUM (undefined = default) \r\n        System            = \"ActiveDirectory\" # optional (free format text) \r\n        Message           = \"Error generating report [$exportFile]\" # required (free format text) \r\n        IsError           = $true # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) \r\n        TargetDisplayName = $exportFile # optional (free format text) \r\n        TargetIdentifier  = \"\" # optional (free format text) \r\n    }\r\n    #send result back  \r\n    Write-Information -Tags \"Audit\" -MessageData $log\r\n}","runInCloud":false}
 '@ 
 
-	$delegatedFormTaskGuid = [PSCustomObject]@{} 
-$delegatedFormTaskName = @'
-AD-export-report-groups-no-members
-'@
-	Invoke-HelloIDAutomationTask -TaskName $delegatedFormTaskName -UseTemplate "False" -AutomationContainer "8" -Variables $tmpVariables -PowershellScript $tmpScript -ObjectGuid $delegatedFormRef.guid -ForceCreateTask $true -returnObject ([Ref]$delegatedFormTaskGuid) 
-} else {
-	Write-Warning "Delegated form '$delegatedFormName' already exists. Nothing to do with the Delegated Form task..." 
-}
-<# End: Delegated Form Task #>
+Invoke-HelloIDDelegatedForm -DelegatedFormName $delegatedFormName -DynamicFormGuid $dynamicFormGuid -AccessGroups $delegatedFormAccessGroupGuids -Categories $delegatedFormCategoryGuids -UseFaIcon "True" -FaIcon "fa fa-info-circle" -task $tmpTask -returnObject ([Ref]$delegatedFormRef) 
+<# End: Delegated Form #>
+
