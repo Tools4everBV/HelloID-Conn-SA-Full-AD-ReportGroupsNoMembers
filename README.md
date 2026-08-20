@@ -8,10 +8,7 @@
 
 HelloID-Conn-SA-Full-AD-ReportGroupsNoMembers is a delegated form designed for use with HelloID Service Automation (SA). It can be imported into HelloID and customized according to your requirements.
 
-By using this delegated form, you can generate reports of Active Directory groups that have no members. The following options are available:
-
-1. View an overview of AD Group objects that have no members (within the specified OUs).
-2. Export the report data to a local CSV file on the HelloID Agent server (optional).
+By using this delegated form, you can generate reports of Active Directory groups that have no members. The report displays an overview of AD Group objects that have no members within the specified OUs. Users can download the results directly from the HelloID interface using the built-in download functionality.
 
 This form enables users to identify empty groups in Active Directory without requiring direct access to AD, thereby improving security by controlling access to the directory.
 
@@ -29,20 +26,20 @@ The following user-defined variables are used by the connector.
 
 | Variable name | Example value | Description | Required |
 | ------------- | ------------- | ----------- | -------- |
-| ADGroupReportOU | `[{ "OU": "OU=Groups,DC=contoso,DC=local"}]` | Array of Active Directory OUs for scoping AD groups shown in this report | Yes |
-| HIDreportFolder | `C:\HIDreports\` | Local folder on HelloID Agent server for exporting CSV reports | Yes |
+| AdGroupsReportSearchOu | `OU=Groups,DC=contoso,DC=local` | Semicolon-separated list of Active Directory OUs for scoping AD groups shown in this report | Yes |
 
 ## Remarks
 
 ### Group Search
 
-- **Search Scope**: Groups are retrieved from the Active Directory OUs specified in the `ADGroupReportOU` variable.
+- **Search Scope**: Groups are retrieved from the Active Directory OUs specified in the `AdGroupsReportSearchOu` variable. Multiple OUs can be specified using semicolon separation.
 - **Empty Group Detection**: The form identifies groups with zero members within the specified search scope.
+- **Filter**: The connector uses the filter `-not(member -like '*')` to identify groups without any members.
 
-### CSV Export
+### Report Export
 
-- **Optional Export**: Users can choose to export the report results to a CSV file on the HelloID Agent server.
-- **Export Location**: The CSV file is saved to the directory specified in the `HIDreportFolder` variable.
+- **Download Functionality**: Users can download the report results directly from the HelloID interface using the built-in grid download button.
+- **No Server-Side Export**: This connector does not create CSV files on the HelloID Agent server. All export functionality is handled through the HelloID UI.
 
 ## Development resources
 
