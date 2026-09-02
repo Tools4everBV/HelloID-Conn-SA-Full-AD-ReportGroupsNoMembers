@@ -6,8 +6,8 @@
 $portalUrl = "https://CUSTOMER.helloid.com"
 $apiKey = "API_KEY"
 $apiSecret = "API_SECRET"
-$delegatedFormAccessGroupNames = @("Users") #Only unique names are supported. Groups must exist!
-$delegatedFormCategories = @("Reporting","Active Directory") #Only unique names are supported. Categories will be created if not exists
+$delegatedFormAccessGroupNames = @("") #Only unique names are supported. Groups must exist!
+$delegatedFormCategories = @("Active Directory","Reporting") #Only unique names are supported. Categories will be created if not exists
 $script:debugLogging = $false #Default value: $false. If $true, the HelloID resource GUIDs will be shown in the logging
 $script:duplicateForm = $false #Default value: $false. If $true, the HelloID resource names will be changed to import a duplicate Form
 $script:duplicateFormSuffix = "_tmp" #the suffix will be added to all HelloID resource names to generate a duplicate form with different resource names
@@ -16,21 +16,12 @@ $script:duplicateFormSuffix = "_tmp" #the suffix will be added to all HelloID re
 #NOTE: You can also update the HelloID Global variable values afterwards in the HelloID Admin Portal: https://<CUSTOMER>.helloid.com/admin/variablelibrary
 $globalHelloIDVariables = [System.Collections.Generic.List[object]]@();
 
-#Global variable #1 >> ADGroupReportOU
+#Global variable #1 >> AdGroupsReportSearchOu
 $tmpName = @'
-ADGroupReportOU
+AdGroupsReportSearchOu
 '@ 
 $tmpValue = @'
-[{ "OU": "OU=Groups,OU=HelloID Training,DC=veeken,DC=local"}]
-'@ 
-$globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "False"});
-
-#Global variable #2 >> HIDreportFolder
-$tmpName = @'
-HIDreportFolder
-'@ 
-$tmpValue = @'
-C:\HIDreports\
+OU=ApplicationGroups,OU=enyoi,DC=enyoi,DC=local;OU=DistributionGroups,OU=enyoi,DC=enyoi,DC=local
 '@ 
 $globalHelloIDVariables.Add([PSCustomObject]@{name = $tmpName; value = $tmpValue; secret = "False"});
 
@@ -88,7 +79,7 @@ function Invoke-HelloIDGlobalVariable {
     try {
         $uri = ($script:PortalBaseUrl + "api/v1/automation/variables/named/$Name")
         $response = Invoke-RestMethod -Method Get -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false
-    
+
         if ([string]::IsNullOrEmpty($response.automationVariableGuid)) {
             #Create Variable
             $body = @{
@@ -98,7 +89,7 @@ function Invoke-HelloIDGlobalVariable {
                 ItemType = 0;
             }    
             $body = ConvertTo-Json -InputObject $body -Depth 100
-    
+
             $uri = ($script:PortalBaseUrl + "api/v1/automation/variable")
             $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false -Body $body
             $variableGuid = $response.automationVariableGuid
@@ -124,14 +115,14 @@ function Invoke-HelloIDAutomationTask {
         [parameter()][String][AllowEmptyString()]$ForceCreateTask,
         [parameter(Mandatory)][Ref]$returnObject
     )
-    
+
     $TaskName = $TaskName + $(if ($script:duplicateForm -eq $true) { $script:duplicateFormSuffix })
 
     try {
         $uri = ($script:PortalBaseUrl +"api/v1/automationtasks?search=$TaskName&container=$AutomationContainer")
         $responseRaw = (Invoke-RestMethod -Method Get -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false) 
         $response = $responseRaw | Where-Object -filter {$_.name -eq $TaskName}
-    
+
         if([string]::IsNullOrEmpty($response.automationTaskGuid) -or $ForceCreateTask -eq $true) {
             #Create Task
 
@@ -144,7 +135,7 @@ function Invoke-HelloIDAutomationTask {
                 variables           = (ConvertFrom-Json-WithEmptyArray($Variables));
             }
             $body = ConvertTo-Json -InputObject $body -Depth 100
-    
+
             $uri = ($script:PortalBaseUrl +"api/v1/automationtasks/powershell")
             $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false -Body $body
             $taskGuid = $response.automationTaskGuid
@@ -171,6 +162,7 @@ function Invoke-HelloIDDatasource {
         [parameter()][String][AllowEmptyString()]$DatasourcePsScript,        
         [parameter()][String][AllowEmptyString()]$DatasourceInput,
         [parameter()][String][AllowEmptyString()]$AutomationTaskGuid,
+        [parameter()][String][AllowEmptyString()]$DatasourceRunInCloud,
         [parameter(Mandatory)][Ref]$returnObject
     )
 
@@ -182,11 +174,11 @@ function Invoke-HelloIDDatasource {
         "3" { "Task data source"; break} 
         "4" { "Powershell data source"; break}
     }
-    
+
     try {
         $uri = ($script:PortalBaseUrl +"api/v1/datasource/named/$DatasourceName")
         $response = Invoke-RestMethod -Method Get -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false
-      
+    
         if([string]::IsNullOrEmpty($response.dataSourceGUID)) {
             #Create DataSource
             $body = @{
@@ -197,12 +189,13 @@ function Invoke-HelloIDDatasource {
                 value              = (ConvertFrom-Json-WithEmptyArray($DatasourceStaticValue));
                 script             = $DatasourcePsScript;
                 input              = (ConvertFrom-Json-WithEmptyArray($DatasourceInput));
+                runInCloud         = $DatasourceRunInCloud;
             }
             $body = ConvertTo-Json -InputObject $body -Depth 100
-      
+    
             $uri = ($script:PortalBaseUrl +"api/v1/datasource")
             $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false -Body $body
-              
+            
             $datasourceGuid = $response.dataSourceGUID
             Write-Information "$datasourceTypeName '$DatasourceName' created$(if ($script:debugLogging -eq $true) { ": " + $datasourceGuid })"
         } else {
@@ -211,7 +204,7 @@ function Invoke-HelloIDDatasource {
             Write-Warning "$datasourceTypeName '$DatasourceName' already exists$(if ($script:debugLogging -eq $true) { ": " + $datasourceGuid })"
         }
     } catch {
-      Write-Error "$datasourceTypeName '$DatasourceName', message: $_"
+        Write-Error "$datasourceTypeName '$DatasourceName', message: $_"
     }
 
     $returnObject.Value = $datasourceGuid
@@ -223,7 +216,7 @@ function Invoke-HelloIDDynamicForm {
         [parameter(Mandatory)][String]$FormSchema,
         [parameter(Mandatory)][Ref]$returnObject
     )
-    
+
     $FormName = $FormName + $(if ($script:duplicateForm -eq $true) { $script:duplicateFormSuffix })
 
     try {
@@ -233,7 +226,7 @@ function Invoke-HelloIDDynamicForm {
         } catch {
             $response = $null
         }
-    
+
         if(([string]::IsNullOrEmpty($response.dynamicFormGUID)) -or ($response.isUpdated -eq $true)) {
             #Create Dynamic form
             $body = @{
@@ -241,10 +234,10 @@ function Invoke-HelloIDDynamicForm {
                 FormSchema = (ConvertFrom-Json-WithEmptyArray($FormSchema));
             }
             $body = ConvertTo-Json -InputObject $body -Depth 100
-    
+
             $uri = ($script:PortalBaseUrl +"api/v1/forms")
             $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false -Body $body
-    
+
             $formGuid = $response.dynamicFormGUID
             Write-Information "Dynamic form '$formName' created$(if ($script:debugLogging -eq $true) { ": " + $formGuid })"
         } else {
@@ -280,7 +273,7 @@ function Invoke-HelloIDDelegatedForm {
         } catch {
             $response = $null
         }
-    
+
         if([string]::IsNullOrEmpty($response.delegatedFormGUID)) {
             #Create DelegatedForm
             $body = @{
@@ -297,10 +290,10 @@ function Invoke-HelloIDDelegatedForm {
                 }
             }
             $body = ConvertTo-Json -InputObject $body -Depth 100
-    
+
             $uri = ($script:PortalBaseUrl +"api/v1/delegatedforms")
             $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false -Body $body
-    
+
             $delegatedFormGuid = $response.delegatedFormGUID
             Write-Information "Delegated form '$DelegatedFormName' created$(if ($script:debugLogging -eq $true) { ": " + $delegatedFormGuid })"
             $delegatedFormCreated = $true
@@ -322,7 +315,6 @@ function Invoke-HelloIDDelegatedForm {
     $returnObject.value.created = $delegatedFormCreated
 }
 
-
 <# Begin: HelloID Global Variables #>
 foreach ($item in $globalHelloIDVariables) {
 	Invoke-HelloIDGlobalVariable -Name $item.name -Value $item.value -Secret $item.secret 
@@ -331,57 +323,111 @@ foreach ($item in $globalHelloIDVariables) {
 
 
 <# Begin: HelloID Data sources #>
-<# Begin: DataSource "AD-group-generate-table-report-empty-groups" #>
+<# Begin: DataSource "report-ad-groups-with-no-members | | AD-Get-Groups-Without-Members" #>
 $tmpPsScript = @'
+#######################################################################
+# Template: HelloID SA Powershell data source
+# Name: report-ad-groups-without-members | AD-Get-Groups-Without-Members
+# Date: 18-08-2026
+#######################################################################
+
+# For basic information about powershell data sources see:
+# https://docs.helloid.com/en/service-automation/dynamic-forms/data-sources/powershell-data-sources.html
+
+# Service automation variables:
+# https://docs.helloid.com/en/service-automation/service-automation-variables.html
+
+# Global variables (Automation --> Variable library)
+$searchOUs = $AdGroupsReportSearchOu
+
+# Fixed values
+$propertiesToSelect = @(
+    "ObjectGuid",
+    "CanonicalName",
+    "Name",
+    "Description"
+)
+
+# Set debug logging
+$VerbosePreference = "SilentlyContinue"
+$InformationPreference = "Continue"
+$WarningPreference = "Continue"
+
 try {
-    $filter = {-not (member -like "*")}
-    $properties = "CanonicalName", "Name", "CN", "Description"
+    #region Get Primary Domain Controller
+    $actionMessage = "querying Primary Domain Controller"
     
-    $ous = $ADGroupReportOU | ConvertFrom-Json
-    $result = foreach($item in $ous) {
-        Get-ADGroup -Filter $filter -SearchBase $item.ou -Properties $properties
-    }
-    $resultCount = @($result).Count
-    $result = $result | Sort-Object -Property Name
-    
-    Write-information "Result count: $resultCount"
-    
-    if($resultCount -gt 0){
-        foreach($r in $result){
-            $returnObject = @{CanonicalName=$r.CanonicalName; Name=$r.Name; CN=$r.CN; Description=$r.Description}
-            Write-output $returnObject
+    $domainController = (Get-ADForest | Select-Object -ExpandProperty RootDomain | Get-ADDomain | Select-Object -Property PDCEmulator).PDCEmulator
+    Write-Information "Queried Primary Domain Controller: [$domainController]"
+    #endregion Get Primary Domain Controller
+
+    # Build filter to find groups without members
+    $filter = "-not(member -like '*')"
+
+    # Query groups
+    $actionMessage = "querying AD group(s) matching the filter [$filter] in OU(s) [$($searchOUs)]"
+
+    $ous = $searchOUs -split ';'
+    $adGroups = [System.Collections.ArrayList]@()
+    foreach ($ou in $ous) {
+        $actionMessage = "querying AD group(s) matching the filter [$filter] in OU [$($ou)]"
+        $getAdGroupsSplatParams = @{
+            Filter      = $filter
+            SearchBase  = $ou
+            Properties  = $propertiesToSelect
+            Server      = $domainController
+            Verbose     = $False
+            ErrorAction = "Stop"
         }
-    } else {
-        return
+        $getAdGroupsResponse = Get-ADGroup @getAdGroupsSplatParams | Select-Object -Property $propertiesToSelect
+
+        if ($getAdGroupsResponse -is [array]) {
+            [void]$adGroups.AddRange($getAdGroupsResponse)
+        }
+        else {
+            [void]$adGroups.Add($getAdGroupsResponse)
+        }
     }
+    Write-Information "Queried AD group(s) matching the filter [$filter] in OU(s) [$($searchOUs)]. Result count: $(($adGroups | Measure-Object).Count)"
     
-} catch {
-    write-error "Error generating report. Error: $($_.Exception.Message)"
-    return
+    # Sort results by Name
+    $actionMessage = "sorting results by Name"
+    $adGroups = $adGroups | Sort-Object -Property Name
+    
+    # Send results to HelloID
+    $adGroups | ForEach-Object {
+        Write-Output $_
+    }
+}
+catch {
+    $ex = $PSItem
+    Write-Warning "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+    Write-Error "Error $($actionMessage). Error: $($ex.Exception.Message)"
+    # exit # use when using multiple try/catch and the script must stop
 }
 '@ 
 $tmpModel = @'
-[{"key":"CanonicalName","type":0},{"key":"Name","type":0},{"key":"Description","type":0},{"key":"CN","type":0}]
+[{"key":"ObjectGuid","type":0},{"key":"CanonicalName","type":0},{"key":"Name","type":0},{"key":"Description","type":0}]
 '@ 
 $tmpInput = @'
 []
 '@ 
 $dataSourceGuid_0 = [PSCustomObject]@{} 
 $dataSourceGuid_0_Name = @'
-AD-group-generate-table-report-empty-groups
+report-ad-groups-with-no-members | | AD-Get-Groups-Without-Members
 '@ 
-Invoke-HelloIDDatasource -DatasourceName $dataSourceGuid_0_Name -DatasourceType "4" -DatasourceInput $tmpInput -DatasourcePsScript $tmpPsScript -DatasourceModel $tmpModel -returnObject ([Ref]$dataSourceGuid_0) 
-<# End: DataSource "AD-group-generate-table-report-empty-groups" #>
+Invoke-HelloIDDatasource -DatasourceName $dataSourceGuid_0_Name -DatasourceType "4" -DatasourceInput $tmpInput -DatasourcePsScript $tmpPsScript -DatasourceModel $tmpModel -DataSourceRunInCloud "False" -returnObject ([Ref]$dataSourceGuid_0) 
+<# End: DataSource "report-ad-groups-with-no-members | | AD-Get-Groups-Without-Members" #>
 <# End: HelloID Data sources #>
 
-<# Begin: Dynamic Form "AD - Report - Groups with no members" #>
+<# Begin: Dynamic Form "Report - AD Groups with no members" #>
 $tmpSchema = @"
-[{"templateOptions":{},"type":"markdown","summaryVisibility":"Show","body":"The following report will show local AD groups that have no members. Please wait while the data is loading...","requiresTemplateOptions":false},{"key":"grid","templateOptions":{"label":"Results","grid":{"columns":[{"headerName":"CanonicalName","field":"CanonicalName"},{"headerName":"Name","field":"Name"},{"headerName":"CN","field":"CN"},{"headerName":"Description","field":"Description"}],"height":500,"rowSelection":"single"},"dataSourceConfig":{"dataSourceGuid":"$dataSourceGuid_0","input":{"propertyInputs":[]}},"useFilter":true,"useDefault":false},"type":"grid","summaryVisibility":"Hide element","requiresTemplateOptions":true},{"key":"exportReport","templateOptions":{"label":"Export report (local export on HelloID Agent server)","useSwitch":true,"checkboxLabel":"Yes","mustBeTrue":true},"type":"boolean","summaryVisibility":"Show","requiresTemplateOptions":true}]
+[{"templateOptions":{"title":"This report displays local AD groups that have no members.","titleField":"","bannerType":"Info","useBody":true},"type":"textbanner","summaryVisibility":"Show","body":"Please wait while the data is loading.\n\nAfter loading, you can use the download button to download the report to CSV.","requiresTemplateOptions":false,"requiresKey":false,"requiresDataSource":false},{"key":"groupsNoMembers","templateOptions":{"label":"Groups without members","grid":{"columns":[{"headerName":"Name","field":"Name"},{"headerName":"Description","field":"Description"},{"headerName":"Canonical Name","field":"CanonicalName"},{"headerName":"Object Guid","field":"ObjectGuid"}],"height":500,"rowSelection":"single"},"dataSourceConfig":{"dataSourceGuid":"$dataSourceGuid_0","input":{"propertyInputs":[]}},"useFilter":true,"useDefault":false,"allowCsvDownload":true},"type":"grid","summaryVisibility":"Hide element","requiresTemplateOptions":true,"requiresKey":true,"requiresDataSource":true},{"key":"textInput","templateOptions":{"label":"Reporting only","required":true,"minLength":1,"readonly":true},"type":"input","summaryVisibility":"Show","requiresTemplateOptions":true,"requiresKey":true,"requiresDataSource":false}]
 "@ 
 
 $dynamicFormGuid = [PSCustomObject]@{} 
 $dynamicFormName = @'
-AD - Report - Groups with no members
+Report - AD Groups with no members
 '@ 
 Invoke-HelloIDDynamicForm -FormName $dynamicFormName -FormSchema $tmpSchema  -returnObject ([Ref]$dynamicFormGuid) 
 <# END: Dynamic Form #>
@@ -395,7 +441,7 @@ if(-not[String]::IsNullOrEmpty($delegatedFormAccessGroupNames)){
             $response = Invoke-RestMethod -Method Get -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false
             $delegatedFormAccessGroupGuid = $response.groupGuid
             $delegatedFormAccessGroupGuids += $delegatedFormAccessGroupGuid
-            
+        
             Write-Information "HelloID (access)group '$group' successfully found$(if ($script:debugLogging -eq $true) { ": " + $delegatedFormAccessGroupGuid })"
         } catch {
             Write-Error "HelloID (access)group '$group', message: $_"
@@ -412,10 +458,10 @@ foreach($category in $delegatedFormCategories) {
         $uri = ($script:PortalBaseUrl +"api/v1/delegatedformcategories/$category")
         $response = Invoke-RestMethod -Method Get -Uri $uri -Headers $script:headers -ContentType "application/json" -Verbose:$false
         $response = $response | Where-Object {$_.name.en -eq $category}
-	
+    
         $tmpGuid = $response.delegatedFormCategoryGuid
         $delegatedFormCategoryGuids += $tmpGuid
-        
+    
         Write-Information "HelloID Delegated Form category '$category' successfully found$(if ($script:debugLogging -eq $true) { ": " + $tmpGuid })"
     } catch {
         Write-Warning "HelloID Delegated Form category '$category' not found"
@@ -438,12 +484,12 @@ $delegatedFormCategoryGuids = (ConvertTo-Json -InputObject $delegatedFormCategor
 <# Begin: Delegated Form #>
 $delegatedFormRef = [PSCustomObject]@{guid = $null; created = $null} 
 $delegatedFormName = @'
-AD - Report - Groups with no members
+Report - AD Groups with no members
 '@
 $tmpTask = @'
-{"name":"AD - Report - Groups with no members","script":"$VerbosePreference = \"SilentlyContinue\"\r\n$InformationPreference = \"Continue\"\r\n$WarningPreference = \"Continue\"\r\n\r\n# variables configured in form\r\n$exportReport = $form.exportReport\r\n\r\ntry {\r\n    if($exportReport -eq \"True\") {\r\n        ## export file properties\r\n        if($HIDreportFolder.EndsWith(\"\\\") -eq $false){\r\n            $HIDreportFolder = $HIDreportFolder + \"\\\"\r\n        }\r\n        \r\n        $timeStamp = $(get-date -f yyyyMMddHHmmss)\r\n        $exportFile = $HIDreportFolder + \"Report_AD_GroupsNoMembers_\" + $timeStamp + \".csv\"\r\n        \r\n        ## Report details\r\n        $filter = {-not (member -like \"*\")}\r\n        $properties = \"CanonicalName\", \"Name\", \"CN\", \"Description\"\r\n    \r\n        $ous = $ADGroupReportOU | ConvertFrom-Json\r\n        $result = foreach($item in $ous) {\r\n            Get-ADGroup -Filter $filter -SearchBase $item.ou -Properties $properties\r\n        }\r\n        $resultCount = @($result).Count\r\n        $result = $result | Sort-Object -Property Name\r\n        \r\n        ## export details\r\n        $exportData = @()\r\n        if($resultCount -gt 0){\r\n            foreach($r in $result){\r\n                $exportData += [pscustomobject]@{\r\n                    \"CanonicalName\" = $r.CanonicalName;\r\n                    \"Name\" = $r.Name;\r\n                    \"CN\" = $r.CN;\r\n                    \"Description\" = $r.Description;\r\n                }\r\n            }\r\n        }\r\n        \r\n        $exportCount = @($exportData).Count\r\n        Write-Information \"Export row count: $exportCount\"\r\n        \r\n        $exportData = $exportData | Sort-Object -Property productName, userName\r\n        $exportData | Export-Csv -Path $exportFile -Delimiter \";\" -NoTypeInformation\r\n        \r\n        Write-Information \"Report [$exportFile] containing $exportCount records created successfully\"\r\n        $Log = @{\r\n            Action            = \"Undefined\" # optional. ENUM (undefined = default) \r\n            System            = \"ActiveDirectory\" # optional (free format text) \r\n            Message           = \"Report [$exportFile] containing $exportCount records created successfully\" # required (free format text) \r\n            IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) \r\n            TargetDisplayName = $exportFile # optional (free format text) \r\n            TargetIdentifier  = \"\" # optional (free format text) \r\n        }\r\n        #send result back  \r\n        Write-Information -Tags \"Audit\" -MessageData $log\r\n    }\r\n} catch {\r\n    Write-Error \"Error generating report. Error: $($_.Exception.Message)\"\r\n    $Log = @{\r\n        Action            = \"Undefined\" # optional. ENUM (undefined = default) \r\n        System            = \"ActiveDirectory\" # optional (free format text) \r\n        Message           = \"Error generating report [$exportFile]\" # required (free format text) \r\n        IsError           = $true # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) \r\n        TargetDisplayName = $exportFile # optional (free format text) \r\n        TargetIdentifier  = \"\" # optional (free format text) \r\n    }\r\n    #send result back  \r\n    Write-Information -Tags \"Audit\" -MessageData $log\r\n}","runInCloud":false}
+{"name":"Report - AD Groups with no members","script":"# No tasks are performed","runInCloud":false}
 '@ 
 
-Invoke-HelloIDDelegatedForm -DelegatedFormName $delegatedFormName -DynamicFormGuid $dynamicFormGuid -AccessGroups $delegatedFormAccessGroupGuids -Categories $delegatedFormCategoryGuids -UseFaIcon "True" -FaIcon "fa fa-info-circle" -task $tmpTask -returnObject ([Ref]$delegatedFormRef) 
+Invoke-HelloIDDelegatedForm -DelegatedFormName $delegatedFormName -DynamicFormGuid $dynamicFormGuid -AccessGroups $delegatedFormAccessGroupGuids -Categories $delegatedFormCategoryGuids -UseFaIcon "True" -FaIcon "fa fa-list" -task $tmpTask -returnObject ([Ref]$delegatedFormRef) 
 <# End: Delegated Form #>
 

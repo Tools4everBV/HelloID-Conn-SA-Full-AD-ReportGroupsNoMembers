@@ -1,34 +1,39 @@
 [
     {
         "templateOptions":  {
-
+                                "title":  "This report displays local AD groups that have no members.",
+                                "titleField":  "",
+                                "bannerType":  "Info",
+                                "useBody":  true
                             },
-        "type":  "markdown",
+        "type":  "textbanner",
         "summaryVisibility":  "Show",
-        "body":  "The following report will show local AD groups that have no members. Please wait while the data is loading...",
-        "requiresTemplateOptions":  false
+        "body":  "Please wait while the data is loading.\n\nAfter loading, you can use the download button to download the report to CSV.",
+        "requiresTemplateOptions":  false,
+        "requiresKey":  false,
+        "requiresDataSource":  false
     },
     {
-        "key":  "grid",
+        "key":  "groupsNoMembers",
         "templateOptions":  {
-                                "label":  "Results",
+                                "label":  "Groups without members",
                                 "grid":  {
                                              "columns":  [
-                                                             {
-                                                                 "headerName":  "CanonicalName",
-                                                                 "field":  "CanonicalName"
-                                                             },
                                                              {
                                                                  "headerName":  "Name",
                                                                  "field":  "Name"
                                                              },
                                                              {
-                                                                 "headerName":  "CN",
-                                                                 "field":  "CN"
-                                                             },
-                                                             {
                                                                  "headerName":  "Description",
                                                                  "field":  "Description"
+                                                             },
+                                                             {
+                                                                 "headerName":  "Canonical Name",
+                                                                 "field":  "CanonicalName"
+                                                             },
+                                                             {
+                                                                 "headerName":  "Object Guid",
+                                                                 "field":  "ObjectGuid"
                                                              }
                                                          ],
                                              "height":  500,
@@ -43,22 +48,27 @@
                                                                    }
                                                      },
                                 "useFilter":  true,
-                                "useDefault":  false
+                                "useDefault":  false,
+                                "allowCsvDownload":  true
                             },
         "type":  "grid",
         "summaryVisibility":  "Hide element",
-        "requiresTemplateOptions":  true
+        "requiresTemplateOptions":  true,
+        "requiresKey":  true,
+        "requiresDataSource":  true
     },
     {
-        "key":  "exportReport",
+        "key":  "textInput",
         "templateOptions":  {
-                                "label":  "Export report (local export on HelloID Agent server)",
-                                "useSwitch":  true,
-                                "checkboxLabel":  "Yes",
-                                "mustBeTrue":  true
+                                "label":  "Reporting only",
+                                "required":  true,
+                                "minLength":  1,
+                                "readonly":  true
                             },
-        "type":  "boolean",
+        "type":  "input",
         "summaryVisibility":  "Show",
-        "requiresTemplateOptions":  true
+        "requiresTemplateOptions":  true,
+        "requiresKey":  true,
+        "requiresDataSource":  false
     }
 ]

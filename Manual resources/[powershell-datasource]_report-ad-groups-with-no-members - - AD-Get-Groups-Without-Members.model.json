@@ -1,5 +1,9 @@
 [
     {
+        "key":  "ObjectGuid",
+        "type":  0
+    },
+    {
         "key":  "CanonicalName",
         "type":  0
     },
@@ -9,10 +13,6 @@
     },
     {
         "key":  "Description",
-        "type":  0
-    },
-    {
-        "key":  "CN",
         "type":  0
     }
 ]
